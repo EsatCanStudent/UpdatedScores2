@@ -1,0 +1,196 @@
+{% extends 'scores/base.html' %}
+{% load i18n %}
+{% load match_filters %}
+
+{% block title %}{{ match.home_team.name }} vs {{ match.away_team.name }} | Maç Detayı{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* CSS styles here */
+    .match-statistics {
+        margin-top: 1rem;
+    }
+    .stats-bar {
+        height: 12px;
+        background-color: #f0f0f0;
+        border-radius: 6px;
+        overflow: hidden;
+        display: flex;
+    }
+    .home-bar {
+        background-color: #007bff;
+        height: 100%;
+    }
+    .away-bar {
+        background-color: #dc3545;
+        height: 100%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Match Statistics Section -->
+    <div class="match-statistics">
+        <h4 class="mb-3"><i class="bi bi-bar-chart"></i> Maç İstatistikleri</h4>
+        {% if analysis %}
+            <!-- Pre-process all data once at the top -->
+            {% with 
+                home_poss=analysis.possession|split_first:"%"|default:"50" 
+                away_poss=analysis.possession|split_second:"%"|default:"50"
+                
+                home_shots=analysis.shots|split_first:"-"|default:"0"|add:0 
+                away_shots=analysis.shots|split_second:"-"|default:"0"|add:0
+                total_shots=home_shots|add:away_shots
+                
+                home_on_target=analysis.shots_on_target|split_first:"-"|default:"0"|add:0 
+                away_on_target=analysis.shots_on_target|split_second:"-"|default:"0"|add:0
+                total_on_target=home_on_target|add:away_on_target
+                
+                home_corners=analysis.corners|split_first:"-"|default:"0"|add:0 
+                away_corners=analysis.corners|split_second:"-"|default:"0"|add:0
+                total_corners=home_corners|add:away_corners
+                
+                home_fouls=analysis.fouls|split_first:"-"|default:"0"|add:0 
+                away_fouls=analysis.fouls|split_second:"-"|default:"0"|add:0
+                total_fouls=home_fouls|add:away_fouls
+                
+                home_yellows=analysis.yellows|split_first:"-"|default:"0"|add:0 
+                away_yellows=analysis.yellows|split_second:"-"|default:"0"|add:0
+                total_yellows=home_yellows|add:away_yellows
+                
+                home_reds=analysis.reds|split_first:"-"|default:"0"|add:0 
+                away_reds=analysis.reds|split_second:"-"|default:"0"|add:0
+                total_reds=home_reds|add:away_reds
+            %}
+                <!-- Possession -->
+                <div class="row align-items-center mb-2">
+                    <div class="col-4 text-end">
+                        <span class="stats-label">{{ home_poss }}%</span>
+                    </div>
+                    <div class="col-4">
+                        <div class="stats-bar">
+                            <div class="home-bar" style="width: {{ home_poss }}%;"></div>
+                            <div class="away-bar" style="width: {{ away_poss }}%;"></div>
+                        </div>
+                        <div class="text-center small">Top Hakimiyeti</div>
+                    </div>
+                    <div class="col-4">
+                        <span class="stats-label">{{ away_poss }}%</span>
+                    </div>
+                </div>
+
+                <!-- Shots -->
+                <div class="row align-items-center mb-2">
+                    <div class="col-4 text-end">
+                        <span class="stats-label">{{ home_shots }}</span>
+                    </div>
+                    <div class="col-4">
+                        <div class="stats-bar">
+                            <div class="home-bar" style="width: {{ home_shots|get_percentage:total_shots }}%;"></div>
+                            <div class="away-bar" style="width: {{ away_shots|get_percentage:total_shots }}%;"></div>
+                        </div>
+                        <div class="text-center small">Şutlar</div>
+                    </div>
+                    <div class="col-4">
+                        <span class="stats-label">{{ away_shots }}</span>
+                    </div>
+                </div>
+                
+                <!-- Shots on Target -->
+                <div class="row align-items-center mb-2">
+                    <div class="col-4 text-end">
+                        <span class="stats-label">{{ home_on_target }}</span>
+                    </div>
+                    <div class="col-4">
+                        <div class="stats-bar">
+                            <div class="home-bar" style="width: {{ home_on_target|get_percentage:total_on_target }}%;"></div>
+                            <div class="away-bar" style="width: {{ away_on_target|get_percentage:total_on_target }}%;"></div>
+                        </div>
+                        <div class="text-center small">İsabetli Şutlar</div>
+                    </div>
+                    <div class="col-4">
+                        <span class="stats-label">{{ away_on_target }}</span>
+                    </div>
+                </div>
+
+                <!-- Corners -->
+                <div class="row align-items-center mb-2">
+                    <div class="col-4 text-end">
+                        <span class="stats-label">{{ home_corners }}</span>
+                    </div>
+                    <div class="col-4">
+                        <div class="stats-bar">
+                            <div class="home-bar" style="width: {{ home_corners|get_percentage:total_corners }}%;"></div>
+                            <div class="away-bar" style="width: {{ away_corners|get_percentage:total_corners }}%;"></div>
+                        </div>
+                        <div class="text-center small">Kornerler</div>
+                    </div>
+                    <div class="col-4">
+                        <span class="stats-label">{{ away_corners }}</span>
+                    </div>
+                </div>
+
+                <!-- Fouls -->
+                <div class="row align-items-center mb-2">
+                    <div class="col-4 text-end">
+                        <span class="stats-label">{{ home_fouls }}</span>
+                    </div>
+                    <div class="col-4">
+                        <div class="stats-bar">
+                            <div class="home-bar" style="width: {{ home_fouls|get_percentage:total_fouls }}%;"></div>
+                            <div class="away-bar" style="width: {{ away_fouls|get_percentage:total_fouls }}%;"></div>
+                        </div>
+                        <div class="text-center small">Fauller</div>
+                    </div>
+                    <div class="col-4">
+                        <span class="stats-label">{{ away_fouls }}</span>
+                    </div>
+                </div>
+
+                <!-- Yellow Cards -->
+                {% if analysis.yellows %}
+                <div class="row align-items-center mb-2">
+                    <div class="col-4 text-end">
+                        <span class="stats-label">{{ home_yellows }}</span>
+                    </div>
+                    <div class="col-4">
+                        <div class="stats-bar">
+                            <div class="home-bar" style="width: {{ home_yellows|get_percentage:total_yellows }}%;"></div>
+                            <div class="away-bar" style="width: {{ away_yellows|get_percentage:total_yellows }}%;"></div>
+                        </div>
+                        <div class="text-center small">Sarı Kartlar</div>
+                    </div>
+                    <div class="col-4">
+                        <span class="stats-label">{{ away_yellows }}</span>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Red Cards -->
+                {% if analysis.reds %}
+                <div class="row align-items-center mb-2">
+                    <div class="col-4 text-end">
+                        <span class="stats-label">{{ home_reds }}</span>
+                    </div>
+                    <div class="col-4">
+                        <div class="stats-bar">
+                            <div class="home-bar" style="width: {{ home_reds|get_percentage:total_reds }}%;"></div>
+                            <div class="away-bar" style="width: {{ away_reds|get_percentage:total_reds }}%;"></div>
+                        </div>
+                        <div class="text-center small">Kırmızı Kartlar</div>
+                    </div>
+                    <div class="col-4">
+                        <span class="stats-label">{{ away_reds }}</span>
+                    </div>
+                </div>
+                {% endif %}
+            {% endwith %}
+        {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> Bu maç için istatistik bulunmuyor.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

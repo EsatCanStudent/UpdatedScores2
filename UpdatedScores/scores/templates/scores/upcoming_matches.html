@@ -1,0 +1,241 @@
+{% extends 'scores/base.html' %}
+{% load i18n %}
+{% load match_filters %}
+
+{% block title %}{% trans "Yaklaşan Maçlar" %} - UpdatedScores{% endblock %}
+
+{% block content %}
+<style>
+    .match-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        border-left: 4px solid transparent;
+    }
+    .match-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+    .match-card.upcoming {
+        border-left-color: #0d6efd;
+    }
+    .team-logo {
+        max-height: 32px;
+        max-width: 32px;
+        object-fit: contain;
+    }
+    .match-time {
+        min-width: 60px;
+        text-align: center;
+    }
+    .date-header {
+        background: linear-gradient(135deg, #0062cc, #007bff);
+        color: white;
+        padding: 10px 15px;
+        border-radius: 5px;
+        margin-top: 20px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .date-header .badge {
+        background-color: rgba(255,255,255,0.3);
+        font-size: 1rem;
+    }
+    .league-header {
+        background-color: #f8f9fa;
+        border-left: 4px solid #6c757d;
+        padding: 10px 15px;
+        margin-bottom: 15px;
+        border-radius: 5px;
+        font-weight: 500;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .league-header .badge {
+        background-color: #6c757d;
+    }
+    .vs-badge {
+        min-width: 60px;
+        text-align: center;
+        font-style: italic;
+        color: #6c757d;
+    }
+    .stadium-info {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    .countdown-container {
+        font-size: 0.85rem;
+        color: #0d6efd;
+    }
+    .match-container {
+        animation: fadeIn 0.5s ease-in-out;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .team-name {
+        max-width: 150px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: inline-block;
+    }
+</style>
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>{% trans "Yaklaşan Maçlar" %}</h1>
+        {% if user.is_superuser %}
+        <div>
+            <a href="{% url 'scores:refresh_data' %}?type=matches&next=scores:upcoming_matches" class="btn btn-primary">
+                <i class="bi bi-arrow-clockwise"></i> {% trans "Maçları Güncelle" %}
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle-fill me-2"></i>
+                {% trans "Bugünden itibaren gelecek 7 gün içindeki maçlar gösteriliyor." %}
+            </div>
+        </div>
+    </div>
+    
+    {% if not dates_with_matches %}
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            {% trans "Yaklaşan 7 gün içinde planlanmış maç bulunmuyor." %}
+        </div>
+    {% endif %}
+    
+    {% for date_group in dates_with_matches %}
+        <div class="date-header">
+            <div>
+                {% if date_group.date == today %}
+                    <i class="bi bi-calendar-check me-2"></i>
+                    <span class="fw-bold">{% trans "Bugün" %}</span> 
+                {% else %}
+                    <i class="bi bi-calendar me-2"></i>
+                {% endif %}
+                {{ date_group.date|date:"d.m.Y, l" }}
+            </div>
+            <span class="badge">{{ date_group.count }} {% trans "maç" %}</span>
+        </div>
+        
+        <div class="match-container mb-5">
+            {% for league_group in date_group.leagues %}
+                <div class="league-header">
+                    <div>
+                        <i class="bi bi-trophy me-2"></i>
+                        {{ league_group.league.name }}
+                    </div>
+                    <span class="badge">{{ league_group.matches.count }} {% trans "maç" %}</span>
+                </div>
+                
+                <div class="row row-cols-1 row-cols-md-2 g-3 mb-4">
+                    {% for match in league_group.matches %}
+                        <div class="col">
+                            <div class="card match-card upcoming">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="match-time">
+                                            <i class="bi bi-clock me-1"></i>
+                                            {{ match.match_date|date:"H:i" }}
+                                        </span>
+                                        {% if match.status %}
+                                            <span class="badge bg-primary">{{ match.status }}</span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div class="d-flex align-items-center">
+                                            {% if match.home_team.logo %}
+                                                <img src="{{ match.home_team.logo }}" alt="{{ match.home_team.name }}" class="team-logo me-2">
+                                            {% else %}
+                                                <div class="team-logo me-2 bg-light rounded d-flex align-items-center justify-content-center">
+                                                    <i class="bi bi-shield"></i>
+                                                </div>
+                                            {% endif %}
+                                            <span class="team-name fw-bold">{{ match.home_team.name }}</span>
+                                        </div>
+                                        
+                                        <span class="vs-badge">VS</span>
+                                        
+                                        <div class="d-flex align-items-center">
+                                            <span class="team-name fw-bold text-end">{{ match.away_team.name }}</span>
+                                            {% if match.away_team.logo %}
+                                                <img src="{{ match.away_team.logo }}" alt="{{ match.away_team.name }}" class="team-logo ms-2">
+                                            {% else %}
+                                                <div class="team-logo ms-2 bg-light rounded d-flex align-items-center justify-content-center">
+                                                    <i class="bi bi-shield"></i>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="stadium-info">
+                                            <i class="bi bi-geo-alt me-1"></i>
+                                            {{ match.stadium }}
+                                        </div>
+                                        <a href="{% url 'scores:match_detail' match.id %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-info-circle me-1"></i>
+                                            {% trans "Detaylar" %}
+                                        </a>
+                                    </div>
+                                </div>
+                                
+                                <div class="card-footer bg-transparent">
+                                    <div class="countdown-container">
+                                        <i class="bi bi-stopwatch me-1"></i>
+                                        <span class="countdown-timer" data-datetime="{{ match.match_date|date:'c' }}"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function startCountdownTimers() {
+    const timers = document.querySelectorAll('.countdown-timer');
+    timers.forEach(function(timer) {
+        const dateStr = timer.getAttribute('data-datetime');
+        if (!dateStr) return;
+        function updateCountdown() {
+            const matchTime = new Date(dateStr.replace(/-/g, '/'));
+            const now = new Date();
+            const diff = matchTime - now;
+            if (diff <= 0) {
+                timer.textContent = '{% trans "Maç Başladı" %}';
+                timer.classList.add('text-success', 'fw-bold');
+                return;
+            }
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+            const minutes = Math.floor((diff / (1000 * 60)) % 60);
+            const seconds = Math.floor((diff / 1000) % 60);
+            let str = '';
+            if (days > 0) str += days + '{% trans "g" %} ';
+            str += hours.toString().padStart(2, '0') + ':' + minutes.toString().padStart(2, '0') + ':' + seconds.toString().padStart(2, '0');
+            timer.textContent = str;
+        }
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+    });
+}
+document.addEventListener('DOMContentLoaded', startCountdownTimers);
+</script>
+{% endblock %}

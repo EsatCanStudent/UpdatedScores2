@@ -1,0 +1,42 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-05-20 23:28+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+#: .\scores\templates\scores\base.html:8 .\scores\templates\scores\base.html:53
+msgid "Futbol Skorları"
+msgstr "Futbol Skorları"
+
+#: .\scores\templates\scores\base.html:60
+msgid "Anasayfa"
+msgstr "Anasayfa"
+
+#: .\scores\templates\scores\base.html:63
+msgid "Ligler"
+msgstr "Ligler"
+
+#: .\scores\templates\scores\base.html:66
+msgid "Takımlar"
+msgstr "Takımlar"
+
+#: .\scores\templates\scores\base.html:70
+msgid "Profil"
+msgstr "Profil"
+
+#: .\scores\templates\scores\base.html:97
+msgid "Futbol Skorları. Tüm hakları saklıdır."
+msgstr "Futbol Skorları. Tüm hakları saklıdır."

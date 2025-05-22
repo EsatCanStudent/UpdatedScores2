@@ -1,0 +1,91 @@
+{% extends 'scores/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Tüm Ligler" %} - UpdatedScores{% endblock %}
+
+{% block content %}
+<style>
+    .league-card {
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .league-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+    .league-header {
+        background: linear-gradient(135deg, #0062cc, #007bff);
+        color: white;
+        font-weight: 600;
+        padding: 15px;
+    }
+    .league-footer {
+        background-color: #f8f9fa;
+        border-top: none;
+    }
+    .team-count-badge {
+        background-color: #6c757d;
+        color: white;
+        padding: 0.35em 0.65em;
+        font-size: 0.85em;
+        font-weight: 700;
+        border-radius: 0.25rem;
+        margin-left: 0.5rem;
+    }
+    .country-flag {
+        width: 24px;
+        height: 24px;
+        margin-right: 8px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+</style>
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>{% trans "Ligler" %}</h1>
+        {% if user.is_superuser %}
+        <div>
+            <a href="{% url 'scores:refresh_data' %}?type=leagues&next=scores:leagues" class="btn btn-primary">
+                <i class="bi bi-arrow-clockwise"></i> {% trans "Ligleri Güncelle" %}
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if leagues_with_teams_count %}
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-4">
+            {% for league_data in leagues_with_teams_count %}
+                <div class="col">
+                    <div class="card h-100 league-card">
+                        <div class="card-header league-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>{{ league_data.league.name }}</span>
+                                <span class="team-count-badge">{{ league_data.teams_count }}</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="fw-bold me-2">{% trans "Ülke" %}:</span>
+                                <span>{{ league_data.league.country }}</span>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <span class="fw-bold me-2">{% trans "Takımlar" %}:</span>
+                                <span>{{ league_data.teams_count }} {% trans "takım" %}</span>
+                            </div>
+                        </div>
+                        <div class="card-footer league-footer text-center">
+                            <a href="{% url 'scores:league_detail' league_data.league.id %}" class="btn btn-primary w-100">
+                                <i class="bi bi-eye"></i> {% trans "Lig Detayları" %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-warning">
+            {% trans "Henüz hiç lig bulunmuyor." %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

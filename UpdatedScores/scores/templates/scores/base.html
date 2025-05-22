@@ -1,0 +1,135 @@
+{% load static %}
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{% block meta_description %}Football scores, match details, statistics and live updates{% endblock %}">
+    <title>{% block title %}{% trans "Futbol Skorları" %}{% endblock %}</title>
+    
+    <!-- Critical CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Defer non-critical CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet" media="print" onload="this.media='all'">
+    
+    <!-- Preload important resources -->
+    <link rel="preload" href="{% static 'scores/css/custom.css' %}" as="style">
+    <link href="{% static 'scores/css/custom.css' %}" rel="stylesheet">
+    
+    <!-- Defer Chart.js loading -->
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        body {
+            background: #229954;
+            color: #fff;
+            min-height: 100vh;
+        }
+        .navbar {
+            background: #27ae60 !important;
+        }
+        .navbar .navbar-brand, .navbar-nav .nav-link, .navbar-toggler {
+            color: #fff !important;
+        }
+        .navbar .nav-link.active, .navbar .nav-link:focus, .navbar .nav-link:hover {
+            color: #e9ffe9 !important;
+            text-decoration: underline;
+        }
+        .container {
+            margin-top: 2rem;
+        }
+        .dropdown-menu {
+            background: #229954;
+        }
+        .dropdown-item {
+            color: #fff;
+        }
+        .dropdown-item:hover {
+            background: #27ae60;
+            color: #fff;
+        }
+        footer {
+            background: #27ae60;
+            color: #fff;
+            text-align: center;
+            padding: 1rem 0;
+            margin-top: 3rem;
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container-fluid">        <a class="navbar-brand fw-bold" href="{% url 'scores:index' %}">
+            <img src="{% static 'scores/images/updatedscores_logo.png' %}" alt="UpdatedScores Logo" height="30" class="d-inline-block align-text-top me-2">
+            {% trans "Futbol Skorları" %}
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">                <li class="nav-item">
+                    <a class="nav-link{% if request.resolver_match.url_name == 'index' %} active{% endif %}" href="{% url 'scores:index' %}">{% trans "Anasayfa" %}</a>
+                </li>                <li class="nav-item">
+                    <a class="nav-link{% if request.resolver_match.url_name == 'today_matches' %} active{% endif %}" href="{% url 'scores:today_matches' %}">
+                        <i class="bi bi-calendar-day"></i> {% trans "Bugünkü Maçlar" %}
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link{% if request.resolver_match.url_name == 'upcoming_matches' %} active{% endif %}" href="{% url 'scores:upcoming_matches' %}">
+                        <i class="bi bi-calendar-plus"></i> {% trans "Yaklaşan Maçlar" %}
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link{% if request.resolver_match.url_name == 'leagues' %} active{% endif %}" href="{% url 'scores:leagues' %}">{% trans "Ligler" %}</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link{% if request.resolver_match.url_name == 'teams' %} active{% endif %}" href="{% url 'scores:teams' %}">{% trans "Takımlar" %}</a>
+                </li>
+                {% if user.is_authenticated %}
+                <li class="nav-item">
+                    <a class="nav-link{% if request.resolver_match.url_name == 'profile' %} active{% endif %}" href="{% url 'scores:profile' %}">{% trans "Profil" %}</a>
+                </li>
+                {% endif %}
+                <li class="nav-item dropdown ms-3">
+                    <a class="nav-link dropdown-toggle" href="#" id="langDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        {% get_current_language as LANGUAGE_CODE %}
+                        {% if LANGUAGE_CODE == 'tr' %} Türkçe {% else %} English {% endif %}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="langDropdown">                        <li>
+                            <a class="dropdown-item" href="#" onclick="event.preventDefault(); document.getElementById('lang-tr').submit();">Türkçe</a>
+                            <form id="lang-tr" action="{% url 'set_language' %}" method="post" style="display:none;">
+                                {% csrf_token %}
+                                <input type="hidden" name="language" value="tr">
+                                <input type="hidden" name="next" value="{{ request.path }}">
+                            </form>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#" onclick="event.preventDefault(); document.getElementById('lang-en').submit();">English</a>
+                            <form id="lang-en" action="{% url 'set_language' %}" method="post" style="display:none;">
+                                {% csrf_token %}
+                                <input type="hidden" name="language" value="en">
+                                <input type="hidden" name="next" value="{{ request.path }}">
+                            </form>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+<div class="container">
+    {% block content %}{% endblock %}
+</div>
+<footer>
+    &copy; {{ now|date:'Y' }} {% trans "Futbol Skorları. Tüm hakları saklıdır." %}
+</footer>
+<!-- Bootstrap 5 JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Our application JavaScript -->
+<script src="{% static 'scores/js/charts.js' %}"></script>
+<script src="{% static 'scores/js/live-matches.js' %}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

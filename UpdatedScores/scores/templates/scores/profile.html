@@ -1,0 +1,167 @@
+{% extends 'scores/base.html' %}
+{% block title %}Profilim{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Profilim</h2>
+        <a href="{% url 'scores:edit_profile' %}" class="btn btn-success btn-sm">
+            <i class="bi bi-pencil"></i> Profili Düzenle
+        </a>
+    </div>
+    
+    <div class="row">
+        <!-- Kişisel Bilgiler -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-person"></i> Kişisel Bilgiler</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Ad:</strong> {{ profile.first_name|default:"Belirtilmemiş" }}</p>
+                    <p><strong>Soyad:</strong> {{ profile.last_name|default:"Belirtilmemiş" }}</p>
+                    <p><strong>E-posta:</strong> {{ profile.user.email }}</p>
+                    <p><strong>Doğum Tarihi:</strong> {% if profile.birth_date %}{{ profile.birth_date|date:'d.m.Y' }}{% else %}Belirtilmemiş{% endif %}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bildirim Ayarları -->
+        <div class="col-lg-8 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-bell"></i> Bildirim Ayarları</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="mb-3">Bildirim Tercihleri:</h6>
+                            <ul class="list-group mb-3">
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    Gol Bildirimleri
+                                    <span class="badge {% if profile.notify_goals %}bg-success{% else %}bg-secondary{% endif %} rounded-pill">
+                                        {% if profile.notify_goals %}Açık{% else %}Kapalı{% endif %}
+                                    </span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    Kırmızı Kart Bildirimleri
+                                    <span class="badge {% if profile.notify_red_cards %}bg-success{% else %}bg-secondary{% endif %} rounded-pill">
+                                        {% if profile.notify_red_cards %}Açık{% else %}Kapalı{% endif %}
+                                    </span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    İlk 11 Bildirimleri
+                                    <span class="badge {% if profile.notify_lineup %}bg-success{% else %}bg-secondary{% endif %} rounded-pill">
+                                        {% if profile.notify_lineup %}Açık{% else %}Kapalı{% endif %}
+                                    </span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    Maç Başlama Bildirimleri
+                                    <span class="badge {% if profile.notify_match_start %}bg-success{% else %}bg-secondary{% endif %} rounded-pill">
+                                        {% if profile.notify_match_start %}Açık{% else %}Kapalı{% endif %}
+                                    </span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    Önemli Olaylar
+                                    <span class="badge {% if profile.notify_important_events %}bg-success{% else %}bg-secondary{% endif %} rounded-pill">
+                                        {% if profile.notify_important_events %}Açık{% else %}Kapalı{% endif %}
+                                    </span>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="mb-3">Bildirim Yöntemi:</h6>
+                            <div class="alert 
+                                {% if profile.notification_method == 'push' %}alert-primary
+                                {% elif profile.notification_method == 'email' %}alert-warning
+                                {% else %}alert-info{% endif %}">
+                                {% if profile.notification_method == 'push' %}
+                                    <i class="bi bi-phone"></i> Push Bildirimleri
+                                {% elif profile.notification_method == 'email' %}
+                                    <i class="bi bi-envelope"></i> E-posta Bildirimleri
+                                {% else %}
+                                    <i class="bi bi-bell"></i> Push ve E-posta Bildirimleri
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <!-- Favori Takımlar -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-star"></i> Favori Takımlarım</h5>
+                </div>
+                <div class="card-body">
+                    {% if favorite_teams %}
+                        <div class="row">
+                            {% for team in favorite_teams %}
+                            <div class="col-12 mb-2">
+                                <div class="card p-2 d-flex flex-row align-items-center border-0 bg-light">                                    {% if team.logo %}
+                                        <img src="{% if team.logo.url %}{{ team.logo.url }}{% else %}{{ team.logo }}{% endif %}" alt="{{ team.name }}" style="height:32px; margin-right:10px;">
+                                    {% endif %}
+                                    <a href="{% url 'scores:team_detail' team.id %}" class="fw-bold">{{ team.name }}</a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning">Favori takımınız yok.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Favori Ligler -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="bi bi-trophy"></i> Favori Liglerim</h5>
+                </div>
+                <div class="card-body">
+                    {% if profile.favorite_leagues.all %}
+                        <ul class="list-group">
+                            {% for league in profile.favorite_leagues.all %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <a href="{% url 'scores:league_detail' league.id %}">{{ league.name }}</a>
+                                <span class="badge bg-secondary rounded-pill">{{ league.country }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <div class="alert alert-warning">Favori liginiz yok.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Favori Oyuncular -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="bi bi-person-badge"></i> Favori Oyuncularım</h5>
+                </div>
+                <div class="card-body">
+                    {% if profile.favorite_players.all %}
+                        <ul class="list-group">
+                            {% for player in profile.favorite_players.all %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ player.name }}
+                                <span class="badge bg-secondary rounded-pill">{{ player.get_position_display }} - {{ player.team.name }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <div class="alert alert-warning">Favori oyuncunuz yok.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

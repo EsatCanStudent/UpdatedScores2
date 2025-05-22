@@ -1,0 +1,343 @@
+{% extends 'scores/base.html' %}
+{% load i18n %}
+{% load match_filters %}
+
+{% block title %}{% trans "Bugünkü ve Yaklaşan Maçlar" %} - UpdatedScores{% endblock %}
+
+{% block content %}
+<style>
+    .match-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        border-left: 4px solid transparent;
+    }
+    .match-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+    .match-card.live {
+        border-left-color: #dc3545;
+    }
+    .match-card.upcoming {
+        border-left-color: #0d6efd;
+    }
+    .match-card.completed {
+        border-left-color: #198754;
+    }
+    .team-logo {
+        max-height: 32px;
+        max-width: 32px;
+        object-fit: contain;
+    }
+    .match-time {
+        min-width: 60px;
+        text-align: center;
+    }
+    .match-date-header {
+        background: linear-gradient(135deg, #0062cc, #007bff);
+        color: white;
+        padding: 10px 15px;
+        border-radius: 5px;
+        margin-top: 20px;
+        margin-bottom: 15px;
+    }
+    .league-header {
+        background-color: #f8f9fa;
+        border-left: 4px solid #6c757d;
+        padding: 10px 15px;
+        margin-bottom: 15px;
+        border-radius: 5px;
+    }
+    .score-badge {
+        min-width: 60px;
+        text-align: center;
+        font-weight: bold;
+        font-size: 1.1rem;
+    }
+    .vs-badge {
+        min-width: 60px;
+        text-align: center;
+        font-style: italic;
+        color: #6c757d;
+    }
+    .stadium-info {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    .countdown-container {
+        font-size: 0.85rem;
+        color: #0d6efd;
+    }
+    .nav-tabs .nav-link {
+        font-weight: 500;
+    }
+    .status-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+</style>
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>{% trans "Bugünkü ve Yaklaşan Maçlar" %}</h1>
+        {% if user.is_superuser %}
+        <div>
+            <a href="{% url 'scores:refresh_data' %}?type=matches&next=scores:today_matches" class="btn btn-primary">
+                <i class="bi bi-arrow-clockwise"></i> {% trans "Maçları Güncelle" %}
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <ul class="nav nav-tabs mb-4" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="today-tab" data-bs-toggle="tab" data-bs-target="#today" type="button" role="tab" aria-controls="today">
+                <i class="bi bi-calendar-day"></i> {% trans "Bugün" %} 
+                <span class="badge bg-primary ms-1">{{ todays_matches.count }}</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="upcoming-tab" data-bs-toggle="tab" data-bs-target="#upcoming" type="button" role="tab" aria-controls="upcoming">
+                <i class="bi bi-calendar-week"></i> {% trans "Yaklaşan Maçlar" %}
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="live-tab" data-bs-toggle="tab" data-bs-target="#live" type="button" role="tab" aria-controls="live">
+                <i class="bi bi-broadcast"></i> {% trans "Canlı Maçlar" %}
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- BUGÜNKÜ MAÇLAR -->
+        <div class="tab-pane fade show active" id="today" role="tabpanel" aria-labelledby="today-tab">
+            <h4 class="match-date-header mb-4">
+                <i class="bi bi-calendar-day me-2"></i>{{ today|date:"d F Y, l" }}
+            </h4>
+
+            {% if leagues_with_todays_matches %}
+                {% for league_data in leagues_with_todays_matches %}
+                    <div class="league-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <a href="{% url 'scores:league_detail' league_data.league.id %}" class="text-decoration-none text-dark">
+                                {{ league_data.league.name }} <small>({{ league_data.league.country }})</small>
+                            </a>
+                        </h5>
+                        <span class="badge bg-secondary">{{ league_data.matches|length }} {% trans "maç" %}</span>
+                    </div>
+
+                    {% for match in league_data.matches %}
+                        <div class="card mb-3 match-card {% if match.status == 'LIVE' %}live{% elif match.score %}completed{% else %}upcoming{% endif %}">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center">
+                                        {% if match.home_team.logo %}
+                                            <img src="{{ match.home_team.logo }}" alt="{{ match.home_team.name }}" class="team-logo me-2">
+                                        {% endif %}
+                                        <a href="{% url 'scores:team_detail' match.home_team.id %}" class="text-decoration-none">
+                                            {{ match.home_team.name }}
+                                        </a>
+                                    </div>
+
+                                    <div class="match-time">
+                                        {% if match.score %}
+                                            <a href="{% url 'scores:match_detail' match.id %}" class="badge bg-success score-badge">
+                                                {{ match.score }}
+                                            </a>
+                                        {% else %}
+                                            <span class="vs-badge">vs</span>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="d-flex align-items-center">
+                                        <a href="{% url 'scores:team_detail' match.away_team.id %}" class="text-decoration-none">
+                                            {{ match.away_team.name }}
+                                        </a>
+                                        {% if match.away_team.logo %}
+                                            <img src="{{ match.away_team.logo }}" alt="{{ match.away_team.name }}" class="team-logo ms-2">
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center mt-2">
+                                    <div class="stadium-info">
+                                        <i class="bi bi-geo-alt"></i> {{ match.stadium|default:"Bilinmeyen Stadyum" }}
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="match-time me-2">{{ match.match_date|date:"H:i" }}</div>
+                                        {% if match.status == 'LIVE' %}
+                                            <span class="badge bg-danger status-badge">{% trans "CANLI" %}</span>
+                                        {% elif not match.score %}
+                                            <div class="countdown-container">
+                                                <span class="countdown-timer" data-datetime="{{ match.match_date|date:'c' }}"></span>
+                                            </div>
+                                        {% else %}
+                                            <span class="badge bg-secondary status-badge">{% trans "TAMAMLANDI" %}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% endfor %}
+            {% else %}
+                <div class="alert alert-info">
+                    {% trans "Bugün için planlanan maç bulunmuyor." %}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- YAKLAŞAN MAÇLAR -->
+        <div class="tab-pane fade" id="upcoming" role="tabpanel" aria-labelledby="upcoming-tab">
+            {% if dates_with_matches %}
+                {% for date_data in dates_with_matches %}
+                    <h4 class="match-date-header mb-3">
+                        <i class="bi bi-calendar me-2"></i>{{ date_data.date|date:"d F Y, l" }}
+                    </h4>
+
+                    {% for match in date_data.matches %}
+                        <div class="card mb-3 match-card upcoming">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center">
+                                        {% if match.home_team.logo %}
+                                            <img src="{{ match.home_team.logo }}" alt="{{ match.home_team.name }}" class="team-logo me-2">
+                                        {% endif %}
+                                        <a href="{% url 'scores:team_detail' match.home_team.id %}" class="text-decoration-none">
+                                            {{ match.home_team.name }}
+                                        </a>
+                                    </div>
+
+                                    <div class="match-time">
+                                        <span class="vs-badge">vs</span>
+                                    </div>
+
+                                    <div class="d-flex align-items-center">
+                                        <a href="{% url 'scores:team_detail' match.away_team.id %}" class="text-decoration-none">
+                                            {{ match.away_team.name }}
+                                        </a>
+                                        {% if match.away_team.logo %}
+                                            <img src="{{ match.away_team.logo }}" alt="{{ match.away_team.name }}" class="team-logo ms-2">
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center mt-2">
+                                    <div class="d-flex align-items-center">
+                                        <span class="badge bg-secondary me-2">{{ match.league.name }}</span>
+                                        <div class="stadium-info">
+                                            <i class="bi bi-geo-alt"></i> {{ match.stadium|default:"Bilinmeyen Stadyum" }}
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="match-time me-2">{{ match.match_date|date:"H:i" }}</div>
+                                        <div class="countdown-container">
+                                            <span class="countdown-timer" data-datetime="{{ match.match_date|date:'c' }}"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% endfor %}
+            {% else %}
+                <div class="alert alert-info">
+                    {% trans "Yaklaşan maç bulunmuyor." %}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- CANLI MAÇLAR -->
+        <div class="tab-pane fade" id="live" role="tabpanel" aria-labelledby="live-tab">
+            {% with live_matches=todays_matches|filter:"status='LIVE'" %}
+                {% if live_matches %}
+                    <h4 class="match-date-header mb-3">
+                        <i class="bi bi-broadcast me-2"></i>{% trans "Canlı Maçlar" %}
+                    </h4>
+
+                    {% for match in live_matches %}
+                        <div class="card mb-3 match-card live">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center">
+                                        {% if match.home_team.logo %}
+                                            <img src="{{ match.home_team.logo }}" alt="{{ match.home_team.name }}" class="team-logo me-2">
+                                        {% endif %}
+                                        <a href="{% url 'scores:team_detail' match.home_team.id %}" class="text-decoration-none">
+                                            {{ match.home_team.name }}
+                                        </a>
+                                    </div>
+
+                                    <div class="match-time">
+                                        <a href="{% url 'scores:match_detail' match.id %}" class="badge bg-danger score-badge">
+                                            {{ match.score|default:"0-0" }}
+                                        </a>
+                                    </div>
+
+                                    <div class="d-flex align-items-center">
+                                        <a href="{% url 'scores:team_detail' match.away_team.id %}" class="text-decoration-none">
+                                            {{ match.away_team.name }}
+                                        </a>
+                                        {% if match.away_team.logo %}
+                                            <img src="{{ match.away_team.logo }}" alt="{{ match.away_team.name }}" class="team-logo ms-2">
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center mt-2">
+                                    <div class="d-flex align-items-center">
+                                        <span class="badge bg-secondary me-2">{{ match.league.name }}</span>
+                                        <div class="stadium-info">
+                                            <i class="bi bi-geo-alt"></i> {{ match.stadium|default:"Bilinmeyen Stadyum" }}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-danger">{% trans "CANLI" %}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="alert alert-info">
+                        {% trans "Şu anda yayında olan canlı maç bulunmuyor." %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Geri sayım için gerekli fonksiyonlar
+        function updateCountdowns() {
+            document.querySelectorAll('.countdown-timer').forEach(function(element) {
+                const targetDate = new Date(element.dataset.datetime);
+                const now = new Date();
+                const diff = targetDate - now;
+                
+                if (diff <= 0) {
+                    element.innerHTML = '<span class="badge bg-warning">Şimdi başlıyor</span>';
+                } else {
+                    const hours = Math.floor(diff / (1000 * 60 * 60));
+                    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    
+                    if (hours > 0) {
+                        element.textContent = `${hours} saat ${minutes} dk kaldı`;
+                    } else {
+                        element.textContent = `${minutes} dk kaldı`;
+                    }
+                }
+            });
+        }
+        
+        // İlk çalıştırma
+        updateCountdowns();
+        
+        // Her dakika güncelle
+        setInterval(updateCountdowns, 60000);
+    });
+</script>
+{% endblock %}
+{% endblock %}

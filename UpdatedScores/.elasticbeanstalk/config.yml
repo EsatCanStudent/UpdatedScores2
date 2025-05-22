@@ -1,0 +1,20 @@
+branch-defaults:
+  main:
+    environment: updatedscores-env
+    group_suffix: null
+deploy:
+  artifact: null
+global:
+  application_name: updatedscores-app
+  branch: main
+  default_ec2_keyname: null
+  default_platform: Python 3.11
+  default_region: eu-north-1
+  include_git_submodules: true
+  instance_profile: null
+  platform_name: null
+  platform_version: null
+  profile: null
+  repository: null
+  sc: null
+  workspace_type: Application

@@ -1,0 +1,276 @@
+{% extends 'scores/base.html' %}
+{% block title %}{{ league.name }} - Lig Detayı{% endblock %}
+{% block content %}
+<div class="container mt-4">    <div class="d-flex justify-content-between align-items-center">
+        <h2>{{ league.name }} <small class="text-muted">({{ league.country }})</small></h2>
+        {% if user.is_authenticated %}
+            {% if league in user.profile.favorite_leagues.all %}
+                <a href="{% url 'scores:remove_favorite_league' league.id %}" class="btn btn-outline-danger">
+                    <i class="bi bi-star-fill"></i> Favorilerden Çıkar
+                </a>
+            {% else %}
+                <a href="{% url 'scores:add_favorite_league' league.id %}" class="btn btn-outline-success">
+                    <i class="bi bi-star"></i> Favorilere Ekle
+                </a>
+            {% endif %}
+        {% endif %}
+    </div>
+    <hr>
+    <h4>Puan Durumu</h4>
+    <div class="table-responsive mb-4">
+        <table class="table table-striped table-bordered">
+            <thead class="table-success">
+                <tr>
+                    <th>#</th>
+                    <th>Takım</th>
+                    <th>O</th>
+                    <th>G</th>
+                    <th>B</th>
+                    <th>M</th>
+                    <th>AG</th>
+                    <th>YG</th>
+                    <th>Puan</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in standings %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td><a href="{% url 'scores:team_detail' row.team.id %}">{{ row.team.name }}</a></td>
+                    <td>{{ row.played }}</td>
+                    <td>{{ row.won }}</td>
+                    <td>{{ row.draw }}</td>
+                    <td>{{ row.lost }}</td>
+                    <td>{{ row.goals_for }}</td>
+                    <td>{{ row.goals_against }}</td>
+                    <td class="fw-bold">{{ row.points }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h5>En Çok Gol Atan Takımlar</h5>
+            <ul class="list-group">
+                {% for scorer in scorer_stats %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    {{ scorer.match__home_team__name }}
+                    <span class="badge bg-success rounded-pill">{{ scorer.gol }}</span>
+                </li>
+                {% empty %}
+                <li class="list-group-item">Gol atan takım yok.</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="col-md-6">
+            <h5>En Az Gol Yiyen Takımlar</h5>
+            <ul class="list-group">
+                {% for row in least_conceded %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    {{ row.team.name }}
+                    <span class="badge bg-primary rounded-pill">{{ row.goals_against }}</span>
+                </li>
+                {% empty %}
+                <li class="list-group-item">Veri yok.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    <div class="mb-4">
+        <canvas id="leagueGoalsChart" height="80"></canvas>
+    </div>    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>Fikstür</h4>
+        {% if user.is_superuser %}
+        <a href="{% url 'scores:refresh_data' %}?type=matches&next=scores:league_detail&league_id={{ league.id }}" class="btn btn-success">
+            <i class="bi bi-arrow-clockwise"></i> Maçları Güncelle
+        </a>
+        {% endif %}
+    </div>
+    
+    <ul class="nav nav-tabs mb-4" id="matchTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="all-matches-tab" data-bs-toggle="tab" data-bs-target="#all-matches" type="button" role="tab" aria-controls="all-matches" aria-selected="true">Tüm Maçlar</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="upcoming-tab" data-bs-toggle="tab" data-bs-target="#upcoming" type="button" role="tab" aria-controls="upcoming" aria-selected="false">Yaklaşan Maçlar</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed" type="button" role="tab" aria-controls="completed" aria-selected="false">Tamamlanan Maçlar</button>
+        </li>
+    </ul>
+    
+    <div class="tab-content" id="matchTabsContent">
+        <div class="tab-pane fade show active" id="all-matches" role="tabpanel" aria-labelledby="all-matches-tab">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Tarih</th>
+                            <th>Saat</th>
+                            <th>Ev Sahibi</th>
+                            <th>Skor</th>
+                            <th>Deplasman</th>
+                            <th>Stadyum</th>
+                            <th>Durum</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for match in matches %}
+                        <tr>
+                            <td>{{ match.match_date|date:'d.m.Y' }}</td>
+                            <td>{{ match.match_date|date:'H:i' }}</td>
+                            <td>
+                                {% if match.home_team.logo %}
+                                    <img src="{{ match.home_team.logo }}" alt="{{ match.home_team.name }}" style="height: 20px; margin-right: 5px;">
+                                {% endif %}
+                                <a href="{% url 'scores:team_detail' match.home_team.id %}">{{ match.home_team.name }}</a>
+                            </td>
+                            <td><a href="{% url 'scores:match_detail' match.id %}" class="fw-bold">{{ match.score|default:'-' }}</a></td>
+                            <td>
+                                {% if match.away_team.logo %}
+                                    <img src="{{ match.away_team.logo }}" alt="{{ match.away_team.name }}" style="height: 20px; margin-right: 5px;">
+                                {% endif %}
+                                <a href="{% url 'scores:team_detail' match.away_team.id %}">{{ match.away_team.name }}</a>
+                            </td>
+                            <td>{{ match.stadium }}</td>
+                            <td>{{ match.status }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-3">Bu lig için maç bulunamadı.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="tab-pane fade" id="upcoming" role="tabpanel" aria-labelledby="upcoming-tab">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>Tarih</th>
+                            <th>Saat</th>
+                            <th>Ev Sahibi</th>
+                            <th>Deplasman</th>
+                            <th>Stadyum</th>
+                            <th>Geri Sayım</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for match in matches %}
+                        {% if not match.score %}
+                        <tr>
+                            <td>{{ match.match_date|date:'d.m.Y' }}</td>
+                            <td>{{ match.match_date|date:'H:i' }}</td>
+                            <td>
+                                {% if match.home_team.logo %}
+                                    <img src="{{ match.home_team.logo }}" alt="{{ match.home_team.name }}" style="height: 20px; margin-right: 5px;">
+                                {% endif %}
+                                <a href="{% url 'scores:team_detail' match.home_team.id %}">{{ match.home_team.name }}</a>
+                            </td>
+                            <td>
+                                {% if match.away_team.logo %}
+                                    <img src="{{ match.away_team.logo }}" alt="{{ match.away_team.name }}" style="height: 20px; margin-right: 5px;">
+                                {% endif %}
+                                <a href="{% url 'scores:team_detail' match.away_team.id %}">{{ match.away_team.name }}</a>
+                            </td>
+                            <td>{{ match.stadium }}</td>
+                            <td><span class="countdown-timer" data-datetime="{{ match.match_date|date:'c' }}"></span></td>
+                        </tr>
+                        {% endif %}
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-3">Bu lig için yaklaşan maç bulunamadı.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="tab-pane fade" id="completed" role="tabpanel" aria-labelledby="completed-tab">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-success">
+                        <tr>
+                            <th>Tarih</th>
+                            <th>Saat</th>
+                            <th>Ev Sahibi</th>
+                            <th>Skor</th>
+                            <th>Deplasman</th>
+                            <th>Stadyum</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for match in matches %}
+                        {% if match.score %}
+                        <tr>
+                            <td>{{ match.match_date|date:'d.m.Y' }}</td>
+                            <td>{{ match.match_date|date:'H:i' }}</td>
+                            <td>
+                                {% if match.home_team.logo %}
+                                    <img src="{{ match.home_team.logo }}" alt="{{ match.home_team.name }}" style="height: 20px; margin-right: 5px;">
+                                {% endif %}
+                                <a href="{% url 'scores:team_detail' match.home_team.id %}">{{ match.home_team.name }}</a>
+                            </td>
+                            <td><a href="{% url 'scores:match_detail' match.id %}" class="fw-bold">{{ match.score }}</a></td>
+                            <td>
+                                {% if match.away_team.logo %}
+                                    <img src="{{ match.away_team.logo }}" alt="{{ match.away_team.name }}" style="height: 20px; margin-right: 5px;">
+                                {% endif %}
+                                <a href="{% url 'scores:team_detail' match.away_team.id %}">{{ match.away_team.name }}</a>
+                            </td>
+                            <td>{{ match.stadium }}</td>
+                        </tr>
+                        {% endif %}
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-3">Bu lig için tamamlanan maç bulunamadı.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% block extra_js %}
+<script id="team-names-data" type="application/json">{{ team_names|safe }}</script>
+<script id="goals-for-data" type="application/json">{{ goals_for_list|safe }}</script>
+<script id="goals-against-data" type="application/json">{{ goals_against_list|safe }}</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const teamNames = JSON.parse(document.getElementById('team-names-data').textContent);
+const goalsFor = JSON.parse(document.getElementById('goals-for-data').textContent);
+const goalsAgainst = JSON.parse(document.getElementById('goals-against-data').textContent);
+const ctx = document.getElementById('leagueGoalsChart').getContext('2d');
+const chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: teamNames,
+        datasets: [
+            {
+                label: 'Attığı Gol',
+                data: goalsFor,
+                backgroundColor: '#27ae60'
+            },
+            {
+                label: 'Yediği Gol',
+                data: goalsAgainst,
+                backgroundColor: '#e74c3c'
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: { beginAtZero: true }
+        }
+    }
+});
+</script>
+{% endblock %}
+{% endblock %

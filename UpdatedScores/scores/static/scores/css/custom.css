@@ -1,0 +1,232 @@
+/* 
+ * Custom CSS for Football Scores application 
+ * Contains styles for charts, live animations, and enhanced UI elements
+ */
+
+/* Chart containers */
+.chart-container {
+    position: relative;
+    height: 300px;
+    margin-bottom: 2rem;
+}
+
+.chart-container.small {
+    height: 200px;
+}
+
+.chart-container.large {
+    height: 400px;
+}
+
+/* Player ratings visualization */
+.player-rating-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.player-name {
+    flex: 1;
+    max-width: 150px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-right: 10px;
+}
+
+.rating-bar {
+    flex: 2;
+    height: 20px;
+    background-color: #e9ecef;
+    border-radius: 10px;
+    position: relative;
+}
+
+.rating-value {
+    position: absolute;
+    height: 100%;
+    border-radius: 10px 0 0 10px;
+    transition: width 0.5s ease-in-out;
+}
+
+.rating-text {
+    margin-left: 10px;
+    font-weight: bold;
+    width: 30px;
+}
+
+/* Rating colors */
+.rating-excellent { background-color: #198754; } /* Green */
+.rating-good { background-color: #0dcaf0; }      /* Blue */
+.rating-average { background-color: #ffc107; }   /* Yellow */
+.rating-poor { background-color: #dc3545; }      /* Red */
+
+/* Live match indicators */
+.live-indicator {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    background-color: #dc3545;
+    border-radius: 50%;
+    margin-right: 5px;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.5; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.2); }
+    100% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.match-card.pulse-live {
+    box-shadow: 0 0 10px rgba(220, 53, 69, 0.5);
+}
+
+/* Score change animation */
+.score-changed {
+    animation: flash-score 2s;
+}
+
+@keyframes flash-score {
+    0%, 100% { background-color: transparent; }
+    50% { background-color: rgba(255, 193, 7, 0.5); }
+}
+
+/* Match timeline */
+.match-timeline {
+    position: relative;
+    height: 60px;
+    background: linear-gradient(to right, rgba(13, 110, 253, 0.1), rgba(220, 53, 69, 0.1));
+    border-radius: 5px;
+    margin: 1rem 0;
+}
+
+.timeline-marker {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    z-index: 5;
+}
+
+.timeline-marker.goal {
+    top: 20%;
+}
+
+.timeline-marker.card {
+    top: 70%;
+}
+
+.timeline-marker.home {
+    color: #0d6efd;
+}
+
+.timeline-marker.away {
+    color: #dc3545;
+}
+
+.timeline-divider {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+.timeline-divider.halftime {
+    left: 50%;
+}
+
+.timeline-divider.fulltime {
+    left: 100%;
+}
+
+/* Head-to-head visualization */
+.h2h-stat {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.h2h-team {
+    flex: 1;
+    text-align: center;
+    font-weight: bold;
+}
+
+.h2h-bar-container {
+    flex: 2;
+    height: 20px;
+    background-color: #e9ecef;
+    position: relative;
+    border-radius: 10px;
+}
+
+.h2h-bar-home, .h2h-bar-away {
+    position: absolute;
+    height: 100%;
+    top: 0;
+}
+
+.h2h-bar-home {
+    left: 0;
+    background-color: #0d6efd;
+    border-radius: 10px 0 0 10px;
+}
+
+.h2h-bar-away {
+    right: 0;
+    background-color: #dc3545;
+    border-radius: 0 10px 10px 0;
+}
+
+.h2h-stat-value {
+    margin: 0 5px;
+    font-weight: bold;
+}
+
+/* Notification area for live updates */
+#event-notifications {
+    max-width: 350px;
+}
+
+#event-notifications .alert {
+    margin-bottom: 0.5rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* Tabs enhancement */
+.nav-tabs .nav-link {
+    position: relative;
+}
+
+.nav-tabs .nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background-color: #27ae60;
+}
+
+/* Statistics card enhancements */
+.stats-card {
+    transition: all 0.3s ease-in-out;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.stats-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.stats-card-header {
+    background: linear-gradient(135deg, #229954, #27ae60);
+    color: white;
+    padding: 15px;
+}
+
+.stats-card-body {
+    padding: 20px;
+}

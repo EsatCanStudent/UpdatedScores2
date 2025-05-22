@@ -1,0 +1,271 @@
+{% extends 'scores/base.html' %}
+{% block title %}Profil Bilgilerini Düzenle{% endblock %}
+
+{% block extra_head %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+    .form-section {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #e9ecef;
+    }
+    .form-section h4 {
+        margin-bottom: 20px;
+        color: #495057;
+    }
+    .custom-checkbox {
+        padding: 10px;
+        border-radius: 5px;
+        margin-bottom: 5px;
+        transition: background-color 0.2s;
+    }
+    .custom-checkbox:hover {
+        background-color: #f8f9fa;
+    }
+    .select2-container {
+        width: 100% !important;
+    }
+    .notification-option {
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        margin-bottom: 8px;
+        transition: all 0.3s;
+    }
+    .notification-option:hover {
+        background-color: #e9ecef;
+    }
+    .notification-method {
+        padding: 15px;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        margin: 10px 0;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    .notification-method:hover {
+        border-color: #adb5bd;
+    }
+    .notification-method.selected {
+        background-color: #e9ffef;
+        border-color: #198754;
+    }
+    label.required:after {
+        content: " *";
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Profil Bilgilerini Düzenle</h2>
+        <a href="{% url 'scores:profile' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Profile Dön
+        </a>
+    </div>
+    
+    <form method="post" class="profile-form">
+        {% csrf_token %}
+        
+        <!-- Kişisel Bilgiler -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-person"></i> Kişisel Bilgiler</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.first_name.id_for_label }}">Ad</label>
+                        {{ form.first_name }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.last_name.id_for_label }}">Soyad</label>
+                        {{ form.last_name }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.birth_date.id_for_label }}">Doğum Tarihi</label>
+                        {{ form.birth_date }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Favori Seçimleri -->
+        <div class="row mb-4">
+            <!-- Favori Takımlar -->
+            <div class="col-lg-4 mb-3">
+                <div class="card h-100">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="bi bi-star"></i> Favori Takımlar</h5>
+                    </div>
+                    <div class="card-body overflow-auto" style="max-height: 400px;">
+                        <div class="mb-3">
+                            <input type="text" class="form-control" id="teamSearch" placeholder="Takım Ara...">
+                        </div>
+                        <div id="teamContainer">
+                            {% for choice in form.favorite_teams %}
+                                <div class="custom-checkbox">
+                                    {{ choice.tag }}
+                                    <label for="{{ choice.id_for_label }}" class="form-check-label">{{ choice.choice_label }}</label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Favori Ligler -->
+            <div class="col-lg-4 mb-3">
+                <div class="card h-100">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="bi bi-trophy"></i> Favori Ligler</h5>
+                    </div>
+                    <div class="card-body overflow-auto" style="max-height: 400px;">
+                        <div class="mb-3">
+                            <input type="text" class="form-control" id="leagueSearch" placeholder="Lig Ara...">
+                        </div>
+                        <div id="leagueContainer">
+                            {% for choice in form.favorite_leagues %}
+                                <div class="custom-checkbox">
+                                    {{ choice.tag }}
+                                    <label for="{{ choice.id_for_label }}" class="form-check-label">{{ choice.choice_label }}</label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Favori Oyuncular -->
+            <div class="col-lg-4 mb-3">
+                <div class="card h-100">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0"><i class="bi bi-person-badge"></i> Favori Oyuncular</h5>
+                    </div>
+                    <div class="card-body">
+                        {{ form.favorite_players }}
+                        <small class="text-muted">Birden fazla oyuncu seçmek için CTRL tuşuna basılı tutun.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bildirim Tercihleri -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-bell"></i> Bildirim Tercihleri</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="mb-3">Bildirim Tipleri</h6>
+                        <div class="notification-option">
+                            {{ form.notify_goals }}
+                            <label for="{{ form.notify_goals.id_for_label }}" class="form-check-label ms-2">
+                                <i class="bi bi-soccer-ball"></i> Gol Bildirimleri
+                            </label>
+                        </div>
+                        <div class="notification-option">
+                            {{ form.notify_red_cards }}
+                            <label for="{{ form.notify_red_cards.id_for_label }}" class="form-check-label ms-2">
+                                <i class="bi bi-exclamation-square"></i> Kırmızı Kart Bildirimleri
+                            </label>
+                        </div>
+                        <div class="notification-option">
+                            {{ form.notify_lineup }}
+                            <label for="{{ form.notify_lineup.id_for_label }}" class="form-check-label ms-2">
+                                <i class="bi bi-people"></i> İlk 11 Bildirimleri
+                            </label>
+                        </div>
+                        <div class="notification-option">
+                            {{ form.notify_match_start }}
+                            <label for="{{ form.notify_match_start.id_for_label }}" class="form-check-label ms-2">
+                                <i class="bi bi-alarm"></i> Maç Başlama Bildirimleri
+                            </label>
+                        </div>
+                        <div class="notification-option">
+                            {{ form.notify_important_events }}
+                            <label for="{{ form.notify_important_events.id_for_label }}" class="form-check-label ms-2">
+                                <i class="bi bi-star"></i> Önemli Olaylar
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6 class="mb-3">Bildirim Yöntemi</h6>
+                        <div class="notification-methods">
+                            {% for choice in form.notification_method %}
+                                <div class="notification-method" data-value="{{ choice.data.value }}">
+                                    {{ choice.tag }}
+                                    <label for="{{ choice.id_for_label }}" class="form-check-label ms-2">
+                                        {% if choice.choice_value == 'push' %}
+                                            <i class="bi bi-phone"></i>
+                                        {% elif choice.choice_value == 'email' %}
+                                            <i class="bi bi-envelope"></i>
+                                        {% else %}
+                                            <i class="bi bi-bell"></i>
+                                        {% endif %}
+                                        {{ choice.choice_label }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="d-grid gap-2 d-sm-flex justify-content-sm-end">
+            <button type="reset" class="btn btn-outline-secondary me-md-2">Sıfırla</button>
+            <button type="submit" class="btn btn-success">
+                <i class="bi bi-check-circle"></i> Değişiklikleri Kaydet
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    $(document).ready(function() {
+        // Select2 için
+        $('.select2').select2({
+            placeholder: 'Favori oyuncularınızı seçin',
+            allowClear: true
+        });
+        
+        // Form stillerini düzenle
+        $('input[type="text"], input[type="date"], select').addClass('form-control');
+        $('input[type="checkbox"]').addClass('form-check-input');
+        
+        // Takım arama
+        $('#teamSearch').on('keyup', function() {
+            var value = $(this).val().toLowerCase();
+            $('#teamContainer .custom-checkbox').filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
+        });
+        
+        // Lig arama
+        $('#leagueSearch').on('keyup', function() {
+            var value = $(this).val().toLowerCase();
+            $('#leagueContainer .custom-checkbox').filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
+        });
+        
+        // Bildirim yöntemi seçimi için görsel efekt
+        $('.notification-method').on('click', function() {
+            $('.notification-method').removeClass('selected');
+            $(this).addClass('selected');
+        });
+        
+        // Sayfa yüklendiğinde seçili metodu göster
+        var selectedMethod = $('input[name="notification_method"]:checked').val();
+        $('.notification-method[data-value="' + selectedMethod + '"]').addClass('selected');
+    });
+</script>
+{% endblock %}

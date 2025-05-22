@@ -1,0 +1,291 @@
+{% extends 'scores/base.html' %}
+{% load i18n %}
+
+{% block title %}Performance Dashboard | UpdatedScores{% endblock %}
+
+{% block extra_head %}
+<style>
+    .metric-card {
+        margin-bottom: 20px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    .metric-header {
+        padding: 15px;
+        color: white;
+        font-weight: bold;
+    }
+    .metric-body {
+        padding: 15px;
+    }
+    .bg-performance {
+        background: linear-gradient(135deg, #4b6cb7, #182848);
+    }
+    .bg-database {
+        background: linear-gradient(135deg, #134E5E, #71B280);
+    }
+    .bg-cache {
+        background: linear-gradient(135deg, #8E2DE2, #4A00E0);
+    }
+    .bg-memory {
+        background: linear-gradient(135deg, #f12711, #f5af19);
+    }
+    .performance-table {
+        width: 100%;
+        font-size: 14px;
+    }
+    .performance-table th {
+        position: sticky;
+        top: 0;
+        background-color: #f8f9fa;
+        z-index: 10;
+    }
+    .query-container {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    .refresh-btn {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 100;
+    }
+    .progress {
+        height: 25px;
+    }
+    .progress-bar {
+        line-height: 25px;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h2">
+                <i class="bi bi-speedometer"></i> Performance Dashboard
+                <span class="badge bg-secondary">Generated at: {{ generated_at|date:"H:i:s" }}</span>
+                <span class="badge bg-info">Load Time: {{ load_time|floatformat:3 }}s</span>
+            </h1>
+            <p class="lead">Performance monitoring and diagnostics for UpdatedScores application</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- System Metrics -->
+        <div class="col-md-6">
+            <div class="metric-card">
+                <div class="metric-header bg-performance">
+                    <i class="bi bi-cpu"></i> System Metrics
+                </div>
+                <div class="metric-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Memory Usage (RSS)</h5>
+                            <div class="progress mb-3">
+                                {% with memory_percent=metrics.memory_usage.rss|floatformat:0|add:"0" %}
+                                <div class="progress-bar bg-primary" role="progressbar" 
+                                     style="width: {{ memory_percent }}%;" 
+                                     aria-valuenow="{{ memory_percent }}" aria-valuemin="0" aria-valuemax="100">
+                                    {{ metrics.memory_usage.rss|floatformat:2 }} MB
+                                </div>
+                                {% endwith %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>CPU Usage</h5>
+                            <div class="progress mb-3">
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: {{ metrics.cpu_percent }}%;" 
+                                     aria-valuenow="{{ metrics.cpu_percent }}" aria-valuemin="0" aria-valuemax="100">
+                                    {{ metrics.cpu_percent|floatformat:1 }}%
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">Threads</h5>
+                                    <p class="card-text display-4">{{ metrics.threads }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">Open Files</h5>
+                                    <p class="card-text display-4">{{ metrics.open_files }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">Connections</h5>
+                                    <p class="card-text display-4">{{ metrics.connections }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Memory Leakers -->
+        <div class="col-md-6">
+            <div class="metric-card">
+                <div class="metric-header bg-memory">
+                    <i class="bi bi-memory"></i> Memory Utilization
+                </div>
+                <div class="metric-body">
+                    <h5>Top Memory Consumers</h5>
+                    {% if memory_leakers %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Type</th>
+                                    <th>Size</th>
+                                    <th>Sample</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for leak in memory_leakers %}
+                                <tr>
+                                    <td>{{ leak.type }}</td>
+                                    <td>{{ leak.size }}</td>
+                                    <td>{{ leak.sample|truncatechars:100 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle"></i> No memory leakage patterns detected.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Database Metrics -->
+        <div class="col-md-6">
+            <div class="metric-card">
+                <div class="metric-header bg-database">
+                    <i class="bi bi-database"></i> Database Performance
+                </div>
+                <div class="metric-body">
+                    <h5>Query Statistics</h5>
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> Total Queries: <strong>{{ db_stats.queries_count }}</strong>
+                    </div>
+                    
+                    {% if db_stats.queries %}
+                    <h5>Recent Queries</h5>
+                    <div class="query-container">
+                        <table class="table table-sm table-hover">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Time (ms)</th>
+                                    <th>Query</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for query in db_stats.queries %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>{{ query.time|floatformat:3 }}</td>
+                                    <td><code>{{ query.sql }}</code></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Cache Metrics -->
+        <div class="col-md-6">
+            <div class="metric-card">
+                <div class="metric-header bg-cache">
+                    <i class="bi bi-lightning-charge"></i> Cache Performance
+                </div>
+                <div class="metric-body">
+                    {% if cache_stats and not cache_stats.error %}
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h5>Hit Rate</h5>
+                            <div class="progress">
+                                {% with hit_rate=cache_stats.get_hits|default:0|floatformat:0|add:"0" %}
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: {{ hit_rate }}%;" 
+                                     aria-valuenow="{{ hit_rate }}" aria-valuemin="0" aria-valuemax="100">
+                                    {{ hit_rate }}%
+                                </div>
+                                {% endwith %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Miss Rate</h5>
+                            <div class="progress">
+                                {% with miss_rate=cache_stats.get_misses|default:0|floatformat:0|add:"0" %}
+                                <div class="progress-bar bg-danger" role="progressbar" 
+                                     style="width: {{ miss_rate }}%;" 
+                                     aria-valuenow="{{ miss_rate }}" aria-valuemin="0" aria-valuemax="100">
+                                    {{ miss_rate }}%
+                                </div>
+                                {% endwith %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <tbody>
+                                {% for key, value in cache_stats.items %}
+                                <tr>
+                                    <td>{{ key }}</td>
+                                    <td>{{ value }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i> Cache statistics not available.
+                        {% if cache_stats.error %}
+                        <p class="mb-0">Error: {{ cache_stats.error }}</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<a href="{% url 'scores:performance_dashboard' %}" class="btn btn-primary btn-lg refresh-btn">
+    <i class="bi bi-arrow-clockwise"></i> Refresh
+</a>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto refresh every 30 seconds
+    setTimeout(function() {
+        window.location.reload();
+    }, 30000);
+</script>
+{% endblock %}

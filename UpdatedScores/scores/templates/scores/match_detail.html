@@ -1,0 +1,901 @@
+{% extends 'scores/base.html' %}
+{% load i18n %}
+{% load match_filters %}
+{% block title %}{{ match.home_team.name }} vs {{ match.away_team.name }} | Maç Detayı{% endblock %}
+
+{% block extra_head %}
+<style>
+    .match-header {
+        background: linear-gradient(135deg, #0062cc, #007bff);
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        color: white;
+        position: relative;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    .team-logo {
+        max-height: 64px;
+        max-width: 64px;
+        margin-bottom: 10px;
+    }
+    .score-display {
+        font-size: 2.5rem;
+        font-weight: bold;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 10px 20px;
+        border-radius: 10px;
+        display: inline-block;
+    }
+    .team-name {
+        font-weight: bold;
+    }
+    /* Timeline visualization */
+    .timeline-container {
+        margin: 20px 0;
+    }
+    .timeline {
+        height: 60px;
+        position: relative;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        padding: 5px;
+    }
+    .timeline-line {
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background-color: #adb5bd;
+        transform: translateY(-50%);
+    }
+    .timeline-event {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 12px;
+        cursor: pointer;
+        z-index: 1;
+    }
+    .timeline-event .minute {
+        position: absolute;
+        bottom: -20px;
+        font-size: 10px;
+        color: #333;
+    }
+    .timeline-event.goal {
+        background-color: #28a745;
+    }
+    .timeline-event.yellow {
+        background-color: #ffc107;
+    }
+    .timeline-event.red {
+        background-color: #dc3545;
+    }
+    .timeline-event.home {
+        top: 25%;
+    }
+    .timeline-event.away {
+        top: 75%;
+    }
+    }
+    .countdown-box {
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        display: inline-block;
+    }
+    .countdown-timer {
+        font-weight: bold;
+        font-size: 1.2rem;
+    }
+    .nav-tabs .nav-link {
+        color: #229954;
+        font-weight: 500;
+    }
+    .nav-tabs .nav-link.active {
+        color: #27ae60;
+        font-weight: 700;
+    }
+    .event-card {
+        border-left: 4px solid;
+        transition: transform 0.2s;
+        margin-bottom: 5px;
+    }
+    .event-card:hover {
+        transform: translateX(5px);
+    }
+    .event-card.goal { border-left-color: #198754; }
+    .event-card.yellow { border-left-color: #ffc107; }
+    .event-card.red { border-left-color: #dc3545; }
+    .event-card.assist { border-left-color: #0dcaf0; }
+    .event-card.sub { border-left-color: #6c757d; }
+    
+    .stats-bar {
+        height: 20px;
+        background-color: #e9ecef;
+        border-radius: 10px;
+        margin: 8px 0;
+        position: relative;
+    }
+    .stats-bar .home-bar {
+        position: absolute;
+        left: 0;
+        height: 100%;
+        background-color: #0d6efd;
+        border-radius: 10px 0 0 10px;
+    }
+    .stats-bar .away-bar {
+        position: absolute;
+        right: 0;
+        height: 100%;
+        background-color: #dc3545;
+        border-radius: 0 10px 10px 0;
+    }
+    .stats-label {
+        color: #495057;
+        font-size: 0.85rem;
+        font-weight: bold;
+    }
+    .form-indicator {
+        width: 24px;
+        height: 24px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        color: white;
+        font-weight: bold;
+        margin: 0 2px;
+        font-size: 0.8rem;
+    }    .form-w { background-color: #198754; }
+    .form-d { background-color: #ffc107; }
+    .form-l { background-color: #dc3545; }
+    .match-card {
+        transition: transform 0.2s;
+        border-left: 4px solid #6c757d;
+    }
+    .match-card:hover {
+        transform: translateY(-3px);
+    }
+    .preview-box, .analysis-box {
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+    }
+    .preview-box {
+        background-color: #eff8ff;
+        border: 1px solid #c5e1ff;
+    }
+    .analysis-box {
+        background-color: #f1fff8;
+        border: 1px solid #c3f0d8;
+    }
+    .live-indicator {
+        position: absolute;
+        top: -10px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #dc3545;
+        color: white;
+        padding: 3px 15px;
+        border-radius: 15px;
+        font-weight: bold;
+        font-size: 0.8rem;
+        display: flex;
+        align-items: center;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    .pulse {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: white;
+        margin-right: 8px;
+        animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(255,255,255, 0.7);
+        }
+        70% {
+            box-shadow: 0 0 0 10px rgba(255,255,255, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(255,255,255, 0);
+        }
+    }
+    .key-stat {
+        font-weight: bold;
+        font-size: 1.1rem;
+        color: #198754;
+    }
+    .rating-circle {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: white;
+        margin-right: 5px;
+    }
+    .rating-high { background-color: #198754; }
+    .rating-mid { background-color: #fd7e14; }
+    .rating-low { background-color: #dc3545; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">    <!-- Maç Başlığı -->
+    <div class="match-header">
+        {% if is_live %}
+            <div class="live-indicator">
+                <span class="pulse"></span> CANLI
+            </div>
+        {% endif %}
+        <div class="row align-items-center">
+            <div class="col-md-4 text-center text-md-start">
+                <img src="{{ match.home_team.logo|default:'#' }}" alt="{{ match.home_team.name }}" class="team-logo">
+                <h3 class="team-name mb-0">{{ match.home_team.name }}</h3>
+            </div>
+            <div class="col-md-4 text-center">
+                {% if match.score %}
+                    <div class="score-display">{{ match.score }}</div>
+                {% else %}
+                    <div class="score-display">vs</div>
+                {% endif %}
+                <div class="mt-2">
+                    <span class="badge bg-light text-dark">{{ match.match_date|date:'d.m.Y H:i' }}</span>
+                    <span class="badge bg-success">{{ match.league.name }}</span>
+                    
+                    {% if is_live %}
+                        <span class="badge bg-danger">CANLI</span>
+                    {% elif is_completed %}
+                        <span class="badge bg-secondary">TAMAMLANDI</span>
+                    {% else %}
+                        <span class="badge bg-primary">YAKLAŞAN</span>
+                    {% endif %}
+                </div>
+                <div class="mt-2">
+                    <div class="countdown-box">
+                        <i class="bi bi-clock me-1"></i>
+                        <span class="countdown-timer" data-datetime="{{ match.match_date|date:'c' }}"></span>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <small><i class="bi bi-geo-alt-fill"></i> {{ match.stadium }}</small>
+                </div>
+            </div>
+            <div class="col-md-4 text-center text-md-end">
+                <img src="{{ match.away_team.logo|default:'#' }}" alt="{{ match.away_team.name }}" class="team-logo">
+                <h3 class="team-name mb-0">{{ match.away_team.name }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tablar -->
+    <ul class="nav nav-tabs mb-4" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" id="events-tab" data-bs-toggle="tab" data-bs-target="#events" type="button">
+                <i class="bi bi-lightning-charge"></i> Maç Olayları
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="preview-tab" data-bs-toggle="tab" data-bs-target="#preview" type="button">
+                <i class="bi bi-eye"></i> Önizleme
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="analysis-tab" data-bs-toggle="tab" data-bs-target="#analysis" type="button">
+                <i class="bi bi-bar-chart"></i> Analiz
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button">
+                <i class="bi bi-clock-history"></i> Geçmiş Maçlar
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab İçerikleri -->
+    <div class="tab-content">
+        <!-- Maç Olayları -->
+        <div class="tab-pane fade show active" id="events" role="tabpanel">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-lightning-charge"></i> Maç Olayları</h5>
+                </div>
+                <div class="card-body">                    {% if events %}
+                        <!-- Full event list for all event types -->
+                        <ul class="list-group">
+                            {% for event in events %}
+                                <li class="list-group-item event-card 
+                                    {% if event.event_type == 'GOAL' %}goal
+                                    {% elif event.event_type == 'YELLOW' %}yellow
+                                    {% elif event.event_type == 'RED' %}red
+                                    {% elif event.event_type == 'ASSIST' %}assist
+                                    {% elif event.event_type == 'SUB' %}sub{% endif %}">
+                                    <div class="d-flex align-items-center">
+                                        {% if event.event_type == 'GOAL' %}
+                                            <span class="me-2 text-success"><i class="bi bi-soccer-ball"></i></span>
+                                        {% elif event.event_type == 'YELLOW' %}
+                                            <span class="me-2 text-warning"><i class="bi bi-exclamation-triangle"></i></span>
+                                        {% elif event.event_type == 'RED' %}
+                                            <span class="me-2 text-danger"><i class="bi bi-x-octagon"></i></span>
+                                        {% elif event.event_type == 'ASSIST' %}
+                                            <span class="me-2 text-info"><i class="bi bi-arrow-right-circle"></i></span>
+                                        {% elif event.event_type == 'SUB' %}
+                                            <span class="me-2 text-secondary"><i class="bi bi-arrow-repeat"></i></span>
+                                        {% endif %}
+                                        <span class="fw-bold">{{ event.minute }}'</span>
+                                        <span class="mx-2">{{ event.player.name|default:'Bilinmiyor' }}</span>
+                                        <span class="text-muted">{{ event.get_event_type_display }}</span>
+                                        <span class="ms-auto">{{ event.description }}</span>
+                                    </div>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                        
+                        <!-- Timeline visualization for goals and cards only (using pre-processed data) -->
+                        {% if timeline_events %}
+                        <div class="timeline-container mt-4">
+                            <h6><i class="bi bi-clock-history"></i> Maç Zaman Çizelgesi</h6>
+                            <div class="timeline">
+                                <div class="timeline-line"></div>
+                                {% for event in timeline_events %}
+                                    <div class="timeline-event {{ event.team }} {{ event.type|lower }}"
+                                         style="left: {% widthratio event.minute 90 100 %}%"
+                                         title="{{ event.player }} - {{ event.description }}">
+                                        {% if event.type == 'GOAL' %}<i class="bi bi-soccer-ball"></i>
+                                        {% elif event.type == 'YELLOW' %}<i class="bi bi-exclamation-triangle"></i>
+                                        {% elif event.type == 'RED' %}<i class="bi bi-x-octagon"></i>{% endif %}
+                                        <span class="minute">{{ event.minute }}'</span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-circle"></i> Bu maç için henüz olay kaydı bulunmuyor.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Önizleme -->
+        <div class="tab-pane fade" id="preview" role="tabpanel">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card preview-box">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="bi bi-eye"></i> Maç Önizleme</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if preview %}
+                                <p class="lead">{{ preview.preview_text }}</p>
+                                
+                                {% if preview.prediction %}
+                                <div class="alert alert-info">
+                                    <strong><i class="bi bi-lightning"></i> Tahmin:</strong> {{ preview.prediction }}
+                                </div>
+                                {% endif %}
+                                
+                                {% if preview.key_players %}
+                                <h5 class="mt-3"><i class="bi bi-person-star"></i> Kilit Oyuncular</h5>
+                                <p>{{ preview.key_players|linebreaks }}</p>
+                                {% endif %}
+                            {% else %}
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-exclamation-circle"></i> Bu maç için önizleme bilgisi henüz eklenmemiş.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <!-- Son Form Bilgileri -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0"><i class="bi bi-graph-up"></i> Takımların Formu</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if preview %}
+                                <div class="mb-3">
+                                    <p class="mb-1"><strong>{{ match.home_team.name }}</strong></p>
+                                    <div>
+                                        {% for result in preview.home_form %}
+                                            {% if result == "W" %}
+                                                <span class="form-indicator form-w" title="Galibiyet">W</span>
+                                            {% elif result == "D" %}
+                                                <span class="form-indicator form-d" title="Beraberlik">D</span>
+                                            {% elif result == "L" %}
+                                                <span class="form-indicator form-l" title="Mağlubiyet">L</span>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <div>
+                                    <p class="mb-1"><strong>{{ match.away_team.name }}</strong></p>
+                                    <div>
+                                        {% for result in preview.away_form %}
+                                            {% if result == "W" %}
+                                                <span class="form-indicator form-w" title="Galibiyet">W</span>
+                                            {% elif result == "D" %}
+                                                <span class="form-indicator form-d" title="Beraberlik">D</span>
+                                            {% elif result == "L" %}
+                                                <span class="form-indicator form-l" title="Mağlubiyet">L</span>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-warning">
+                                    Form bilgisi mevcut değil.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analiz -->
+        <div class="tab-pane fade" id="analysis" role="tabpanel">
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card analysis-box">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Maç Analizi</h5>
+                        </div>
+                        <div class="card-body">                            {% if analysis %}
+                                <p class="lead">{{ analysis.analysis_text }}</p>
+                                
+                                {% if analysis.key_moments %}
+                                <h5 class="mt-4"><i class="bi bi-star"></i> Maçın Kilit Anları</h5>
+                                <ul class="list-group">
+                                    {% for moment in analysis.key_moments %}
+                                        <li class="list-group-item">
+                                            <strong>{{ moment.minute }}' -</strong> {{ moment.description }}
+                                            {% if moment.player %}
+                                            <span class="badge bg-secondary">{{ moment.player }}</span>
+                                            {% endif %}
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                  {% if analysis.player_ratings %}
+                                <h5 class="mt-4"><i class="bi bi-people"></i> Oyuncu Değerlendirmeleri</h5>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="card mb-3">
+                                            <div class="card-header">
+                                                <strong>{{ match.home_team.name }}</strong>
+                                            </div>
+                                            <div class="card-body">
+                                                <ul class="list-group">
+                                                    {% if match_stats.player_ratings.home_team %}
+                                                        {% for player in match_stats.player_ratings.home_team %}
+                                                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                                {{ player.name }}
+                                                                <span class="rating-circle {{ player.rating_class }}">
+                                                                    {{ player.rating }}
+                                                                </span>
+                                                            </li>
+                                                        {% endfor %}
+                                                    {% else %}
+                                                        <li class="list-group-item">Değerlendirme yok</li>
+                                                    {% endif %}
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card mb-3">
+                                            <div class="card-header">
+                                                <strong>{{ match.away_team.name }}</strong>
+                                            </div>
+                                            <div class="card-body">
+                                                <ul class="list-group">
+                                                    {% if match_stats.player_ratings.away_team %}
+                                                        {% for player in match_stats.player_ratings.away_team %}
+                                                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                                {{ player.name }}
+                                                                <span class="rating-circle {{ player.rating_class }}">
+                                                                    {{ player.rating }}
+                                                                </span>
+                                                            </li>
+                                                        {% endfor %}
+                                                    {% else %}
+                                                        <li class="list-group-item">Değerlendirme yok</li>
+                                                    {% endif %}
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            {% else %}
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-exclamation-circle"></i> Bu maç için analiz bilgisi henüz eklenmemiş.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4">
+                    <!-- İstatistikler -->
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0"><i class="bi bi-graph-up"></i> Maç İstatistikleri</h5>
+                        </div>
+                        <div class="card-body">                            {% if analysis %}                                {% load match_filters %}
+                                
+                                <div class="row align-items-center mb-2">
+                                    <div class="col-4 text-end">
+                                        <span class="stats-label">{{ match_stats.home_possession }}%</span>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="stats-bar">
+                                            <div class="home-bar" style="width: {{ match_stats.home_possession }}%;"></div>
+                                            <div class="away-bar" style="width: {{ match_stats.away_possession }}%;"></div>
+                                        </div>
+                                        <div class="text-center small">Topa Sahip Olma</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <span class="stats-label">{{ match_stats.away_possession }}%</span>
+                                    </div>
+                                </div>                                <!-- Şutlar -->
+                                <div class="row align-items-center mb-2">
+                                    <div class="col-4 text-end">
+                                        <span class="stats-label">{{ match_stats.home_shots }}</span>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="stats-bar">
+                                            <div class="home-bar" style="width: {% widthratio match_stats.home_shots match_stats.total_shots 100 %}%;"></div>
+                                            <div class="away-bar" style="width: {% widthratio match_stats.away_shots match_stats.total_shots 100 %}%;"></div>
+                                        </div>
+                                        <div class="text-center small">Şutlar</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <span class="stats-label">{{ match_stats.away_shots }}</span>
+                                    </div>
+                                </div>                                
+                                
+                                <!-- İsabetli Şutlar -->
+                                <div class="row align-items-center mb-2">
+                                    <div class="col-4 text-end">
+                                        <span class="stats-label">{{ match_stats.home_shots_on_target }}</span>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="stats-bar">
+                                            <div class="home-bar" style="width: {% widthratio match_stats.home_shots_on_target match_stats.total_shots_on_target 100 %}%;"></div>
+                                            <div class="away-bar" style="width: {% widthratio match_stats.away_shots_on_target match_stats.total_shots_on_target 100 %}%;"></div>
+                                        </div>
+                                        <div class="text-center small">İsabetli Şutlar</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <span class="stats-label">{{ match_stats.away_shots_on_target }}</span>
+                                    </div>
+                                </div>
+
+                                <!-- Kornerler -->
+                                <div class="row align-items-center mb-2">
+                                    <div class="col-4 text-end">
+                                        <span class="stats-label">{{ match_stats.home_corners }}</span>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="stats-bar">
+                                            <div class="home-bar" style="width: {% widthratio match_stats.home_corners match_stats.total_corners 100 %}%;"></div>
+                                            <div class="away-bar" style="width: {% widthratio match_stats.away_corners match_stats.total_corners 100 %}%;"></div>
+                                        </div>
+                                        <div class="text-center small">Kornerler</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <span class="stats-label">{{ match_stats.away_corners }}</span>
+                                    </div>
+                                </div>                                <!-- Fauller -->
+                                <div class="row align-items-center mb-2">
+                                    <div class="col-4 text-end">
+                                        <span class="stats-label">{{ match_stats.home_fouls }}</span>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="stats-bar">
+                                            <div class="home-bar" style="width: {% widthratio match_stats.home_fouls match_stats.total_fouls 100 %}%;"></div>
+                                            <div class="away-bar" style="width: {% widthratio match_stats.away_fouls match_stats.total_fouls 100 %}%;"></div>
+                                        </div>
+                                        <div class="text-center small">Fauller</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <span class="stats-label">{{ match_stats.away_fouls }}</span>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-exclamation-circle"></i> Maç istatistikleri henüz eklenmemiş.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Geçmiş Maçlar -->        <div class="tab-pane fade" id="history" role="tabpanel">
+            <div class="card mb-4">
+                <div class="card-header bg-dark text-white">
+                    <h5><i class="bi bi-arrow-left-right"></i> Karşılıklı İstatistikler</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="h-100">
+                                {% if preview and preview.head_to_head %}
+                                    <div class="text-center mb-3">
+                                        <div class="pie-chart-container">
+                                            <div class="row">
+                                                <div class="col-4 text-center">
+                                                    <div class="key-stat text-primary">{{ preview.head_to_head.home_wins }}</div>
+                                                    <div>{{ match.home_team.name }}</div>
+                                                </div>
+                                                <div class="col-4 text-center">
+                                                    <div class="key-stat text-secondary">{{ preview.head_to_head.draws }}</div>
+                                                    <div>Beraberlik</div>
+                                                </div>
+                                                <div class="col-4 text-center">
+                                                    <div class="key-stat text-danger">{{ preview.head_to_head.away_wins }}</div>
+                                                    <div>{{ match.away_team.name }}</div>
+                                                </div>
+                                            </div>
+                                            <div class="text-center mt-3">
+                                                <p>Toplam {{ preview.head_to_head.total }} karşılaşma</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if preview.head_to_head.matches %}
+                                        <h6 class="mt-3">Son Karşılaşmalar:</h6>
+                                        <ul class="list-group">
+                                            {% for h2h in preview.head_to_head.matches %}
+                                                <li class="list-group-item">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <div>
+                                                            <span class="{% if h2h.result == 'HOME_WIN' %}text-primary fw-bold{% endif %}">{{ h2h.home_team }}</span>
+                                                            <span class="mx-2">{{ h2h.score }}</span>
+                                                            <span class="{% if h2h.result == 'AWAY_WIN' %}text-danger fw-bold{% endif %}">{{ h2h.away_team }}</span>
+                                                        </div>
+                                                        <small>{{ h2h.date }}</small>
+                                                    </div>
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% endif %}
+                                {% else %}
+                                    <div class="alert alert-info">
+                                        <i class="bi bi-info-circle"></i> Karşılıklı maç istatistikleri mevcut değil
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="alert alert-secondary">
+                                <h6 class="mb-3"><i class="bi bi-graph-up"></i> Takımların Karşılaştırması</h6>
+                                
+                                <div class="row mb-2">
+                                    <div class="col-5 text-end">{{ match.home_team.name }}</div>
+                                    <div class="col-2 text-center">vs</div>
+                                    <div class="col-5">{{ match.away_team.name }}</div>
+                                </div>
+                                
+                                {% if preview %}
+                                <div class="mb-3">
+                                    <div class="row mb-1">
+                                        <div class="col-5 text-end">{{ preview.home_stats.avg_goals_scored }}</div>
+                                        <div class="col-2 text-center small">Maç Başı Gol</div>
+                                        <div class="col-5">{{ preview.away_stats.avg_goals_scored }}</div>
+                                    </div>
+                                    <div class="row mb-1">
+                                        <div class="col-5 text-end">{{ preview.home_stats.avg_goals_conceded }}</div>
+                                        <div class="col-2 text-center small">Yenen Gol</div>
+                                        <div class="col-5">{{ preview.away_stats.avg_goals_conceded }}</div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-5 text-end">{{ preview.home_stats.clean_sheets }}</div>
+                                        <div class="col-2 text-center small">Gol Yememe</div>
+                                        <div class="col-5">{{ preview.away_stats.clean_sheets }}</div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <!-- Son 5 maç ev sahibi -->
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h5><i class="bi bi-house"></i> {{ match.home_team.name }} Son 5 Maç</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if home_team_last_matches %}
+                                <div class="list-group">
+                                    {% for m in home_team_last_matches %}
+                                        <a href="{% url 'scores:match_detail' m.id %}" class="list-group-item list-group-item-action match-card">
+                                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                                <div>
+                                                    <span class="{% if m.home_team == match.home_team %}fw-bold{% endif %}">
+                                                        {{ m.home_team.name }}
+                                                    </span>
+                                                    <span class="badge bg-light text-dark">{{ m.score }}</span>
+                                                    <span class="{% if m.away_team == match.home_team %}fw-bold{% endif %}">
+                                                        {{ m.away_team.name }}
+                                                    </span>
+                                                </div>
+                                                <small>{{ m.match_date|date:"d.m.Y" }}</small>
+                                            </div>
+                                        </a>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="alert alert-warning">Maç sonucu yok.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Son 5 maç deplasman -->
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header bg-danger text-white">
+                            <h5><i class="bi bi-airplane"></i> {{ match.away_team.name }} Son 5 Maç</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if away_team_last_matches %}
+                                <div class="list-group">
+                                    {% for m in away_team_last_matches %}
+                                        <a href="{% url 'scores:match_detail' m.id %}" class="list-group-item list-group-item-action match-card">
+                                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                                <div>
+                                                    <span class="{% if m.home_team == match.away_team %}fw-bold{% endif %}">
+                                                        {{ m.home_team.name }}
+                                                    </span>
+                                                    <span class="badge bg-light text-dark">{{ m.score }}</span>
+                                                    <span class="{% if m.away_team == match.away_team %}fw-bold{% endif %}">
+                                                        {{ m.away_team.name }}
+                                                    </span>
+                                                </div>
+                                                <small>{{ m.match_date|date:"d.m.Y" }}</small>
+                                            </div>
+                                        </a>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="alert alert-warning">Maç sonucu yok.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Karşılıklı maçlar -->
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-purple text-white" style="background-color: #6f42c1;">
+                            <h5 class="mb-0"><i class="bi bi-arrow-left-right"></i> Karşılıklı Maçlar</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if head_to_head %}
+                                <div class="list-group">
+                                    {% for m in head_to_head %}
+                                        <a href="{% url 'scores:match_detail' m.id %}" class="list-group-item list-group-item-action match-card">
+                                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                                <div>
+                                                    <span class="fw-bold {% if m.home_team == match.home_team %}text-primary{% elif m.home_team == match.away_team %}text-danger{% endif %}">
+                                                        {{ m.home_team.name }}
+                                                    </span>
+                                                    <span class="badge bg-light text-dark">{{ m.score }}</span>
+                                                    <span class="fw-bold {% if m.away_team == match.home_team %}text-primary{% elif m.away_team == match.away_team %}text-danger{% endif %}">
+                                                        {{ m.away_team.name }}
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <span class="badge bg-secondary">{{ m.match_date|date:"d.m.Y" }}</span>
+                                                    <span class="badge bg-success">{{ m.league.name }}</span>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-exclamation-circle"></i> Bu iki takım arasında kayıtlı bir geçmiş maç bulunamadı.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function startCountdownTimers() {
+    const timers = document.querySelectorAll('.countdown-timer');
+    timers.forEach(function(timer) {
+        const dateStr = timer.getAttribute('data-datetime');
+        if (!dateStr) return;
+        
+        function updateCountdown() {
+            const matchTime = new Date(dateStr.replace(/-/g, '/'));
+            const now = new Date();
+            const diff = matchTime - now;
+            const matchEndTime = new Date(matchTime.getTime() + (2 * 60 * 60 * 1000)); // Match end time (2 hours after start)
+            
+            // Maç tamamlandı
+            if (now > matchEndTime) {
+                timer.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i> Maç Tamamlandı';
+                timer.classList.add('fw-bold');
+                return;
+            }
+            
+            // Maç devam ediyor
+            if (diff <= 0) {
+                const minutesPlayed = Math.floor((now - matchTime) / (1000 * 60));
+                if (minutesPlayed <= 90) {
+                    timer.innerHTML = `<i class="bi bi-play-fill text-danger"></i> <span class="text-danger">${minutesPlayed}'</span> Dakika Oynanıyor`;
+                } else {
+                    timer.innerHTML = '<i class="bi bi-play-fill text-danger"></i> <span class="text-danger">90+</span> Dakika Oynanıyor';
+                }
+                timer.classList.add('fw-bold');
+                return;
+            }
+            
+            // Maç henüz başlamadı - geri sayım
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+            const minutes = Math.floor((diff / (1000 * 60)) % 60);
+            const seconds = Math.floor((diff / 1000) % 60);
+            
+            let str = '<i class="bi bi-hourglass-split"></i> ';
+            if (days > 0) {
+                str += days + ' gün ';
+            }
+            
+            str += hours.toString().padStart(2, '0') + ':' + 
+                  minutes.toString().padStart(2, '0') + ':' + 
+                  seconds.toString().padStart(2, '0');
+            
+            timer.innerHTML = str;
+            
+            // 1 saatten az kaldıysa rengi değiştir
+            if (diff < (60 * 60 * 1000)) {
+                timer.classList.add('text-warning', 'fw-bold');
+            }
+        }
+        
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+    });
+}
+document.addEventListener('DOMContentLoaded', startCountdownTimers);
+</script>
+{% endblock %}

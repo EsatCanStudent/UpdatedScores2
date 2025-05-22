@@ -1,0 +1,3 @@
+"""
+Template Tags initialization file
+"""
